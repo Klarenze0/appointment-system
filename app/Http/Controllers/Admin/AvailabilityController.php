@@ -10,6 +10,7 @@ use App\Services\AvailabilityService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Http\Requests\Admin\UpdateAvailabilityRequest;
 
 class AvailabilityController extends Controller
 {
@@ -60,6 +61,14 @@ class AvailabilityController extends Controller
             ->with('success', 'Availability slot updated.');
     }
 
+    public function update(UpdateAvailabilityRequest $request, StaffProfile $staff, StaffAvailability $availability): RedirectResponse
+    {
+        $this->availabilityService->update($availability, $request->validated());
+
+        return redirect()
+            ->route('admin.staff.availability.index', $staff)
+            ->with('success', 'Availability slot updated.');
+    }
     /**
      * Burahin ang isang slot.
      */

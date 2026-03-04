@@ -12,7 +12,7 @@ class StaffAvailability extends Model
 
     protected $fillable = [
         'staff_id',
-        'day_of_week',
+        'date',
         'start_time',
         'end_time',
         'is_active',
@@ -21,15 +21,9 @@ class StaffAvailability extends Model
     protected function casts(): array
     {
         return [
-            'day_of_week' => 'integer',
-            'is_active'   => 'boolean',
+            // 'date'      => 'date',   
+            'is_active' => 'boolean',
         ];
-    }
-
-    // Convenience: day name from integer
-    public function getDayNameAttribute(): string
-    {
-        return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][$this->day_of_week];
     }
 
     public function staff(): BelongsTo

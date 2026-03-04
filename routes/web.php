@@ -39,6 +39,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])
                      ->name('toggle');
                 Route::delete('/{availability}',       [AvailabilityController::class, 'destroy'])
                      ->name('destroy');
+                Route::patch('/{availability}', [AvailabilityController::class, 'update'])->name('update');
+                
             });    
         Route::get('calendar', [CalendarController::class, 'index'])
             ->name('calendar');
@@ -67,6 +69,8 @@ Route::middleware(['auth', 'verified', 'role:client'])
 
         Route::patch('/{appointment}/reschedule', [BookingController::class, 'reschedule'])
              ->name('reschedule');
+        Route::get('/available-dates', [BookingController::class, 'availableDates'])
+            ->name('available-dates');
     }); 
 
 require __DIR__.'/settings.php';

@@ -74,6 +74,28 @@ class BookingController extends Controller
         }
     }
 
+    public function availableDates(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'staff_id'   => ['required', 'integer', 'exists:staff_profiles,id'],
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'month'      => ['required', 'integer', 'min:1', 'max:12'],
+            'year'       => ['required', 'integer', 'min:2024'],
+        ]);
+
+        $staff   = StaffProfile::findOrFail($request->staff_id);
+        $service = Service::findOrFail($request->service_id);
+
+        $dates = $this->bookingService->getAvailableDatesForMonth(
+            $staff,
+            $service,
+            $request->year,
+            $request->month
+        );
+
+        return response()->json(['dates' => $dates]);
+    }
+
     public function cancel(Appointment $appointment): RedirectResponse
     {
         $this->authorize('cancel', $appointment);

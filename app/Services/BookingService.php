@@ -122,15 +122,12 @@ class BookingService
     }
 
     public function getAvailableSlots(
-        StaffProfile $staff,
-        Service $service,
-        string $date
+    StaffProfile $staff,
+    Service $service,
+    string $date
     ): array {
-        $requestedDate = Carbon::parse($date)->utc();
-        $dayOfWeek     = $requestedDate->dayOfWeek;
-
         $availability = $staff->availabilities()
-            ->where('day_of_week', $dayOfWeek)
+            ->where('date', $date)
             ->where('is_active', true)
             ->first();
 
@@ -138,17 +135,17 @@ class BookingService
             return [];
         }
 
-        $slots         = [];
-        $slotStart     = Carbon::parse($date . ' ' . $availability->start_time)->utc();
-        $windowEnd     = Carbon::parse($date . ' ' . $availability->end_time)->utc();
-        $durationMins  = $service->duration_minutes;
+        $slots        = [];
+        $slotStart    = Carbon::parse($date . ' ' . $availability->start_time)->utc();
+        $windowEnd    = Carbon::parse($date . ' ' . $availability->end_time)->utc();
+        $durationMins = $service->duration_minutes;
 
         $existingAppointments = Appointment::where('staff_id', $staff->id)
             ->whereNotIn('status', [
                 AppointmentStatus::Cancelled->value,
                 AppointmentStatus::NoShow->value,
             ])
-            ->whereDate('starts_at', $requestedDate->toDateString())
+            ->whereDate('starts_at', $date)
             ->get(['starts_at', 'ends_at']);
 
         while ($slotStart->copy()->addMinutes($durationMins)->lte($windowEnd)) {
@@ -172,12 +169,60 @@ class BookingService
 
         return $slots;
     }
-
     public function getClientAppointments(User $client): Collection
-    {
-        return Appointment::where('client_id', $client->id)
-            ->with(['service', 'staff.user'])
-            ->orderBy('starts_at', 'desc')
+        {
+            return Appointment::where('client_id', $client->id)
+                ->with(['service', 'staff.user'])
+                ->orderBy('starts_at', 'desc')
+                ->get();
+        }
+
+        public function getAvailableDatesForMonth(
+        StaffProfile $staff,
+        Service $service,
+        int $year,
+        int $month
+    ): array {
+        // Kunin ang lahat ng availability ng staff sa buwan na ito
+        $availabilities = \App\Models\StaffAvailability::where('staff_id', $staff->id)
+            ->where('is_active', true)
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
             ->get();
+
+        if ($availabilities->isEmpty()) {
+            return [];
+        }
+
+        // Kunin ang lahat ng existing appointments ng staff sa buwan na ito
+        $existingAppointments = Appointment::where('staff_id', $staff->id)
+            ->whereNotIn('status', [
+                AppointmentStatus::Cancelled->value,
+                AppointmentStatus::NoShow->value,
+            ])
+            ->whereYear('starts_at', $year)
+            ->whereMonth('starts_at', $month)
+            ->get(['starts_at', 'ends_at']);
+
+        $availableDates = [];
+
+        foreach ($availabilities as $availability) {
+            $date      = \Carbon\Carbon::parse($availability->date);
+            $dateStr   = $date->toDateString();
+
+            // Preskip ang past dates
+            if ($date->isPast() && ! $date->isToday()) {
+                continue;
+            }
+
+            // I-check kung may available slot pa sa date na ito
+            $slots = $this->getAvailableSlots($staff, $service, $dateStr);
+
+            if (! empty($slots)) {
+                $availableDates[] = $dateStr;
+            }
+        }
+
+        return $availableDates;
     }
 }

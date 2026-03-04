@@ -30,6 +30,10 @@ export default function BookAppointment({ services, flash }: Props) {
     const [slots, setSlots] = useState<SlotOption[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
 
+    const [availableDates, setAvailableDates]       = useState<string[]>([]);
+    const [loadingDates, setLoadingDates]           = useState(false);
+    const [calendarMonth, setCalendarMonth]         = useState<Date>(new Date());
+
     const { data, setData, post, processing, errors } = useForm({
         service_id: '' as number | string,
         staff_id: '' as number | string,
@@ -54,6 +58,10 @@ export default function BookAppointment({ services, flash }: Props) {
         setSlots([]);
         setData('staff_id', staffId);
         setData('starts_at', '');
+
+        if (data.service_id && staffId) {
+            fetchAvailableDates(Number(data.service_id), staffId, calendarMonth);
+        }
     }
 
     // Kapag nag-change ang date, kumuha ng available slots via AJAX
@@ -78,6 +86,26 @@ export default function BookAppointment({ services, flash }: Props) {
             setSlots([]);
         } finally {
             setLoadingSlots(false);
+        }
+    }
+
+    async function fetchAvailableDates(staffId: number, serviceId: number, month: Date) {
+        setLoadingDates(true);
+        setAvailableDates([]);
+        try {
+            const response = await axios.get('/appointments/available-dates', {
+                params: {
+                    staff_id:   staffId,
+                    service_id: serviceId,
+                    month:      month.getMonth() + 1,
+                    year:       month.getFullYear(),
+                },
+            });
+            setAvailableDates(response.data.dates);
+        } catch {
+            setAvailableDates([]);
+        } finally {
+            setLoadingDates(false);
         }
     }
 
@@ -154,23 +182,64 @@ export default function BookAppointment({ services, flash }: Props) {
                         <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
                             3. Select Date
                         </label>
+
+                        {loadingDates && (
+                            <p className="text-xs text-zinc-400">Loading available dates...</p>
+                        )}
+
+                        {!loadingDates && availableDates.length === 0 && selectedStaff && (
+                            <p className="text-xs text-zinc-500 border border-zinc-200 rounded-lg px-4 py-3">
+                                No available dates this month for this staff. Try changing the month.
+                            </p>
+                        )}
+
                         <div className="border border-zinc-200 rounded-lg p-3 bg-white inline-block">
                             <Calendar
                                 mode="single"
+                                month={calendarMonth}
+                                onMonthChange={(month) => {
+                                    setCalendarMonth(month);
+                                    // Kapag nag-change ng month, i-fetch ulit ang available dates
+                                    if (data.service_id && data.staff_id) {
+                                        fetchAvailableDates(
+                                            Number(data.service_id),
+                                            Number(data.staff_id),
+                                            month
+                                        );
+                                    }
+                                }}
                                 selected={selectedDate ? new Date(selectedDate + 'T00:00:00') : undefined}
                                 onSelect={(date) => {
                                     if (!date) return;
-                                    const formatted = date.toLocaleDateString('en-CA'); 
+                                    const formatted = date.toLocaleDateString('en-CA');
                                     handleDateChange(formatted);
                                 }}
                                 disabled={(date) => {
                                     const today = new Date();
                                     today.setHours(0, 0, 0, 0);
-                                    return date < today;
+                                    if (date < today) return true;
+
+                                    // I-disable ang dates na wala sa availableDates list
+                                    const dateStr = date.toLocaleDateString('en-CA');
+                                    return !availableDates.includes(dateStr);
+                                }}
+                                modifiers={{
+                                    // Available dates — green dot ang ipapakita
+                                    available: availableDates.map(d => new Date(d + 'T00:00:00')),
+                                }}
+                                modifiersClassNames={{
+                                    available: 'relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-green-500 after:rounded-full',
                                 }}
                                 className="text-zinc-900"
                             />
                         </div>
+
+                        {!loadingDates && availableDates.length > 0 && (
+                            <p className="text-xs text-zinc-400">
+                                <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
+                                Green dot = available dates
+                            </p>
+                        )}
                     </div>
                 )}
 
