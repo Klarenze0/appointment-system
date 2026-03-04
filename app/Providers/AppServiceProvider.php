@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Service::class, ServicePolicy::class);
         Gate::policy(StaffProfile::class, StaffPolicy::class);
+        Gate::policy(Appointment::class, AppointmentPolicy::class);
     }
 
     /**

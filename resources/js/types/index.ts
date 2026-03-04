@@ -82,3 +82,14 @@ export interface StaffAvailability {
     end_time: string;     // "17:00:00"
     is_active: boolean;
 }
+
+export interface CalendarAppointment {
+    id: number;
+    starts_at: string;
+    ends_at: string;
+    status: AppointmentStatus;
+    client_name: string;
+    staff_name: string;
+    service_name: string;
+    duration: number;
+}

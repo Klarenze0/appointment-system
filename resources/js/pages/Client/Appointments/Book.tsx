@@ -1,0 +1,229 @@
+import ClientLayout from '@/layouts/ClientLayout';
+import { useForm } from '@inertiajs/react';
+import { Service } from '@/types';
+import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Calendar } from '@/components/ui/calendar';
+
+interface StaffOption {
+    id: number;
+    user: { name: string };
+}
+
+interface SlotOption {
+    starts_at: string;
+    ends_at: string;
+    display_time: string;
+}
+
+interface Props {
+    services: (Service & { staff: StaffOption[] })[];
+    flash?: { success?: string; error?: string };
+}
+
+export default function BookAppointment({ services, flash }: Props) {
+
+    const [selectedService, setSelectedService] = useState<(Service & { staff: StaffOption[] }) | null>(null);
+    const [selectedStaff, setSelectedStaff] = useState<StaffOption | null>(null);
+    const [selectedDate, setSelectedDate] = useState('');
+    const [slots, setSlots] = useState<SlotOption[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+
+    const { data, setData, post, processing, errors } = useForm({
+        service_id: '' as number | string,
+        staff_id: '' as number | string,
+        starts_at: '',
+    });
+
+    // Kapag nag-change ang service, i-reset ang staff at slots
+    function handleServiceChange(serviceId: number) {
+        const service = services.find(s => s.id === serviceId) ?? null;
+        setSelectedService(service);
+        setSelectedStaff(null);
+        setSelectedDate('');
+        setSlots([]);
+        setData({ service_id: serviceId, staff_id: '', starts_at: '' });
+    }
+
+    // Kapag nag-change ang staff, i-reset ang date at slots
+    function handleStaffChange(staffId: number) {
+        const staff = selectedService?.staff.find(s => s.id === staffId) ?? null;
+        setSelectedStaff(staff);
+        setSelectedDate('');
+        setSlots([]);
+        setData('staff_id', staffId);
+        setData('starts_at', '');
+    }
+
+    // Kapag nag-change ang date, kumuha ng available slots via AJAX
+    async function handleDateChange(date: string) {
+        setSelectedDate(date);
+        setSlots([]);
+        setData('starts_at', '');
+
+        if (!data.service_id || !data.staff_id || !date) return;
+
+        setLoadingSlots(true);
+        try {
+            const response = await axios.get('/appointments/slots', {
+                params: {
+                    service_id: data.service_id,
+                    staff_id: data.staff_id,
+                    date,
+                },
+            });
+            setSlots(response.data.slots);
+        } catch {
+            setSlots([]);
+        } finally {
+            setLoadingSlots(false);
+        }
+    }
+
+    function submit(e: React.FormEvent) {
+        e.preventDefault();
+        post('/appointments');
+    }
+
+
+    return (
+        <ClientLayout title="Book an Appointment">
+            {flash?.error && (
+                <div className="mb-4 text-sm text-red-700 border border-red-200 bg-red-50 px-4 py-3 rounded">
+                    {flash.error}
+                </div>
+            )}
+
+            <form onSubmit={submit} className="max-w-lg space-y-6">
+
+                {/* ── Step 1: Service ──────────────────────────────────── */}
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                        1. Select Service
+                    </label>
+                    <div className="grid gap-2">
+                        {services.map(service => (
+                            <button
+                                key={service.id}
+                                type="button"
+                                onClick={() => handleServiceChange(service.id)}
+                                className={`text-left px-4 py-3 rounded-lg border text-sm transition-colors ${selectedService?.id === service.id
+                                        ? 'border-zinc-900 bg-zinc-900 text-white'
+                                        : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400'
+                                    }`}
+                            >
+                                <span className="font-medium">{service.name}</span>
+                                <span className="ml-3 text-xs opacity-60">
+                                    {service.duration_minutes}min · ${Number(service.price).toFixed(2)}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    {errors.service_id && <p className="text-xs text-red-500">{errors.service_id}</p>}
+                </div>
+
+                {/* ── Step 2: Staff ─────────────────────────────────────── */}
+                {selectedService && (
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                            2. Select Staff
+                        </label>
+                        <div className="grid gap-2">
+                            {selectedService.staff.map(staff => (
+                                <button
+                                    key={staff.id}
+                                    type="button"
+                                    onClick={() => handleStaffChange(staff.id)}
+                                    className={`text-left px-4 py-3 rounded-lg border text-sm transition-colors ${selectedStaff?.id === staff.id
+                                            ? 'border-zinc-900 bg-zinc-900 text-white'
+                                            : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400'
+                                        }`}
+                                >
+                                    {staff.user.name}
+                                </button>
+                            ))}
+                        </div>
+                        {errors.staff_id && <p className="text-xs text-red-500">{errors.staff_id}</p>}
+                    </div>
+                )}
+
+                {/* ── Step 3: Date ──────────────────────────────────────── */}
+                {selectedStaff && (
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                            3. Select Date
+                        </label>
+                        <div className="border border-zinc-200 rounded-lg p-3 bg-white inline-block">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate ? new Date(selectedDate + 'T00:00:00') : undefined}
+                                onSelect={(date) => {
+                                    if (!date) return;
+                                    const formatted = date.toLocaleDateString('en-CA'); 
+                                    handleDateChange(formatted);
+                                }}
+                                disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                }}
+                                className="text-zinc-900"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Step 4: Time Slot ─────────────────────────────────── */}
+                {selectedDate && (
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                            4. Select Time
+                        </label>
+
+                        {loadingSlots && (
+                            <p className="text-xs text-zinc-400">Loading available times...</p>
+                        )}
+
+                        {!loadingSlots && slots.length === 0 && (
+                            <p className="text-xs text-zinc-400 border border-zinc-200 rounded-lg px-4 py-3">
+                                No available slots on this date. Try another day.
+                            </p>
+                        )}
+
+                        {!loadingSlots && slots.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2">
+                                {slots.map(slot => (
+                                    <button
+                                        key={slot.starts_at}
+                                        type="button"
+                                        onClick={() => setData('starts_at', slot.starts_at)}
+                                        className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${data.starts_at === slot.starts_at
+                                                ? 'border-zinc-900 bg-zinc-900 text-white'
+                                                : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400'
+                                            }`}
+                                    >
+                                        {slot.display_time}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {errors.starts_at && <p className="text-xs text-red-500">{errors.starts_at}</p>}
+                    </div>
+                )}
+
+                {/* ── Submit ────────────────────────────────────────────── */}
+                {data.starts_at && (
+                    <Button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full bg-zinc-900 text-white hover:bg-zinc-700 text-sm"
+                    >
+                        {processing ? 'Booking...' : 'Confirm Booking'}
+                    </Button>
+                )}
+
+            </form>
+        </ClientLayout>
+    );
+}

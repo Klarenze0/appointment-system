@@ -5,7 +5,8 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\StaffController;
-
+use App\Http\Controllers\Client\BookingController;
+use App\Http\Controllers\Admin\CalendarController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -39,6 +40,33 @@ Route::middleware(['auth', 'verified', 'role:admin'])
                 Route::delete('/{availability}',       [AvailabilityController::class, 'destroy'])
                      ->name('destroy');
             });    
+        Route::get('calendar', [CalendarController::class, 'index'])
+            ->name('calendar');
     });
+
+// ─── Client Routes ────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'verified', 'role:client'])
+    ->prefix('appointments')
+    ->name('client.appointments.')
+    ->group(function () {
+
+        Route::get('/',         [BookingController::class, 'index'])
+             ->name('index');
+
+        Route::get('/book',     [BookingController::class, 'create'])
+             ->name('create');
+
+        Route::post('/',        [BookingController::class, 'store'])
+             ->name('store');
+
+        Route::get('/slots',    [BookingController::class, 'slots'])
+             ->name('slots');
+
+        Route::patch('/{appointment}/cancel',     [BookingController::class, 'cancel'])
+             ->name('cancel');
+
+        Route::patch('/{appointment}/reschedule', [BookingController::class, 'reschedule'])
+             ->name('reschedule');
+    }); 
 
 require __DIR__.'/settings.php';
