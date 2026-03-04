@@ -131,4 +131,20 @@ class BookingController extends Controller
                 ->with('error', $e->getMessage());
         }
     }
+
+    public function destroy(Appointment $appointment): RedirectResponse
+    {
+        $this->authorize('delete', $appointment);
+
+        // Hindi pwedeng i-delete ang hindi cancelled
+        if ($appointment->status !== \App\Enums\AppointmentStatus::Cancelled) {
+            return redirect()->back()->with('error', 'Only cancelled appointments can be removed.');
+        }
+
+        $appointment->delete();
+
+        return redirect()
+            ->route('client.appointments.index')
+            ->with('success', 'Appointment removed.');
+    }
 }

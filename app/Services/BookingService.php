@@ -15,6 +15,7 @@ class BookingService
 {
     public function __construct(
         private readonly AvailabilityService $availabilityService,
+        private readonly PaymentService $paymentService,
     ) {}
 
 
@@ -75,7 +76,7 @@ class BookingService
                 );
             }
 
-            return Appointment::create([
+            $appointment = Appointment::create([
                 'client_id'  => $client->id,
                 'staff_id'   => $staff->id,
                 'service_id' => $service->id,
@@ -84,6 +85,12 @@ class BookingService
                 'status'     => AppointmentStatus::Pending,
                 'notes'      => null,
             ]);
+
+            $this->paymentService->createForAppointment(
+                $appointment->load('service')
+            );
+
+            return $appointment;
         });
     }
 
@@ -95,11 +102,20 @@ class BookingService
             );
         }
 
-        $appointment->update([
-            'status' => AppointmentStatus::Cancelled,
-        ]);
+        return DB::transaction(function () use ($appointment) {
+            // Kung paid na ang payment, i-refund
+            $payment = $appointment->payment;
 
-        return $appointment->fresh();
+            if ($payment && $payment->status === \App\Enums\PaymentStatus::Paid) {
+                $this->paymentService->refund($payment);
+            }
+
+            $appointment->update([
+                'status' => AppointmentStatus::Cancelled,
+            ]);
+
+            return $appointment->fresh();
+        });
     }
 
     public function reschedule(Appointment $appointment, string $newStartsAt): Appointment
@@ -169,13 +185,15 @@ class BookingService
 
         return $slots;
     }
+    
     public function getClientAppointments(User $client): Collection
-        {
-            return Appointment::where('client_id', $client->id)
-                ->with(['service', 'staff.user'])
-                ->orderBy('starts_at', 'desc')
-                ->get();
-        }
+    {
+        return Appointment::where('client_id', $client->id)
+            ->with(['service', 'staff.user', 'payment'])
+            ->orderByRaw("CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END")
+            ->orderBy('starts_at', 'desc')
+            ->get();
+    }
 
         public function getAvailableDatesForMonth(
         StaffProfile $staff,

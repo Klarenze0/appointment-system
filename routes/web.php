@@ -6,6 +6,7 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Client\BookingController;
+use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Admin\CalendarController;
 
 Route::inertia('/', 'welcome', [
@@ -71,6 +72,13 @@ Route::middleware(['auth', 'verified', 'role:client'])
              ->name('reschedule');
         Route::get('/available-dates', [BookingController::class, 'availableDates'])
             ->name('available-dates');
+        Route::delete('/{appointment}', [BookingController::class, 'destroy'])->name('destroy');
     }); 
 
+Route::middleware(['auth', 'verified', 'role:client'])
+    ->group(function () {
+        Route::get('/payments/{payment}',          [PaymentController::class, 'show'])->name('client.payments.show');
+        Route::post('/payments/{payment}/process', [PaymentController::class, 'process'])->name('client.payments.process');
+    });
+    
 require __DIR__.'/settings.php';

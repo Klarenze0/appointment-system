@@ -3,15 +3,23 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Appointment, PageProps } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, X, RefreshCw } from 'lucide-react';
+import { Plus, X, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import axios from 'axios';
 
 interface Props {
-    appointments: Appointment[];
+    appointments: (Appointment & {
+        payment?: {
+            id: number;
+            status: string;
+            amount: string;
+        };
+    })[];
     flash?: { success?: string; error?: string };
 }
+
+
 
 interface SlotOption {
     starts_at: string;
@@ -39,6 +47,12 @@ export default function AppointmentsIndex({ appointments, flash }: Props) {
     function handleCancel(id: number) {
         if (confirm('Cancel this appointment?')) {
             router.patch(`/appointments/${id}/cancel`);
+        }
+    }
+
+    function handleDelete(id: number) {
+        if (confirm('Permanently remove this cancelled appointment from your list?')) {
+            router.delete(`/appointments/${id}`);
         }
     }
 
@@ -132,7 +146,20 @@ export default function AppointmentsIndex({ appointments, flash }: Props) {
                                         {appt.status.replace('_', ' ').toUpperCase()}
                                     </Badge>
 
+
+                                    {appt.payment?.status === 'pending' &&
+                                        ['pending', 'confirmed'].includes(appt.status) && (
+                                            <Link href={`/payments/${appt.payment.id}`}>
+                                                <Button
+                                                    size="sm"
+                                                    className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                                >
+                                                    Pay ${Number(appt.payment.amount).toFixed(2)}
+                                                </Button>
+                                            </Link>
+                                        )}
                                     {/* Actions — only for cancellable/reschedulable */}
+                                    {/* Reschedule + Cancel — para sa pending/confirmed lang */}
                                     {['pending', 'confirmed'].includes(appt.status) && (
                                         <div className="flex gap-1.5">
                                             <Button
@@ -156,6 +183,19 @@ export default function AppointmentsIndex({ appointments, flash }: Props) {
                                                 Cancel
                                             </Button>
                                         </div>
+                                    )}
+
+                                    {/* Remove — para sa cancelled lang */}
+                                    {appt.status === 'cancelled' && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-[10px] gap-1 text-red-500 border-red-200 hover:bg-red-50"
+                                            onClick={() => handleDelete(appt.id)}
+                                        >
+                                            <Trash2 size={9} />
+                                            Remove
+                                        </Button>
                                     )}
                                 </div>
                             </div>

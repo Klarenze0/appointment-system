@@ -67,7 +67,8 @@ class AppointmentPolicy
      */
     public function delete(User $user, Appointment $appointment): bool
     {
-        return false;
+        return $appointment->client_id === $user->id
+            && $appointment->status === \App\Enums\AppointmentStatus::Cancelled;
     }
 
     /**
