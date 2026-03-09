@@ -14,7 +14,7 @@ class AvailabilityService
     public function getForStaff(StaffProfile $staff): Collection
     {
         return $staff->availabilities()
-            ->orderBy('date')
+            ->orderBy('available_date')
             ->orderBy('start_time')
             ->get();
     }
@@ -31,17 +31,16 @@ class AvailabilityService
         }
 
         $existingDates = $staff->availabilities()
-            ->whereIn('date', $submittedDates)
-            ->pluck('date')
+            ->whereIn('available_date', $submittedDates)
+            ->pluck('available_date')
             ->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))
             ->toArray();
 
         if (! empty($existingDates)) {
             $conflictList = implode(', ', array_map(
-                fn($d) => Carbon::parse($d)->format('M d, Y'),
+                fn($d) => \Carbon\Carbon::parse($d)->format('M d, Y'),
                 $existingDates
             ));
-
             throw new \InvalidArgumentException(
                 "Availability already exists for: {$conflictList}. Delete the existing slot first."
             );
@@ -50,17 +49,18 @@ class AvailabilityService
         return DB::transaction(function () use ($staff, $availabilities) {
             foreach ($availabilities as $slot) {
                 StaffAvailability::create([
-                    'staff_id'   => $staff->id,
-                    'date'       => $slot['date'],
-                    'start_time' => $slot['start_time'],
-                    'end_time'   => $slot['end_time'],
-                    'is_active'  => $slot['is_active'] ?? true,
+                    'staff_id'       => $staff->id,
+                    'available_date' => $slot['date'],  // ← galing sa form ay 'date' pa rin
+                    'start_time'     => $slot['start_time'],
+                    'end_time'       => $slot['end_time'],
+                    'is_active'      => $slot['is_active'] ?? true,
                 ]);
             }
 
             return $this->getForStaff($staff);
         });
     }
+
 
     public function toggle(StaffAvailability $availability): StaffAvailability
     {
@@ -88,15 +88,15 @@ class AvailabilityService
 
     public function isStaffAvailable(
         StaffProfile $staff,
-        Carbon $startsAt,
-        Carbon $endsAt
+        \Carbon\Carbon $startsAt,
+        \Carbon\Carbon $endsAt
     ): bool {
         $date      = $startsAt->toDateString();
         $startTime = $startsAt->format('H:i:s');
         $endTime   = $endsAt->format('H:i:s');
 
         return StaffAvailability::where('staff_id', $staff->id)
-            ->where('date', $date)
+            ->where('available_date', $date)
             ->where('is_active', true)
             ->where('start_time', '<=', $startTime)
             ->where('end_time',   '>=', $endTime)

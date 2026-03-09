@@ -90,4 +90,39 @@ class StaffManagementService
     {
         return $staffProfile->load('user', 'services');
     }
+
+    public function delete(StaffProfile $staffProfile): void
+    {
+        // I-check kung may active appointments ang staff
+        $hasActiveAppointments = \App\Models\Appointment::where('staff_id', $staffProfile->id)
+            ->whereNotIn('status', [
+                \App\Enums\AppointmentStatus::Cancelled->value,
+                \App\Enums\AppointmentStatus::Completed->value,
+                \App\Enums\AppointmentStatus::NoShow->value,
+            ])
+            ->exists();
+
+        if ($hasActiveAppointments) {
+            throw new \RuntimeException(
+                'Cannot delete this staff member. They have pending or confirmed appointments. Cancel all appointments first before deleting.'
+            );
+        }
+
+        // Safe na mag-delete — walang active appointments
+        DB::transaction(function () use ($staffProfile) {
+            $user = $staffProfile->user;
+
+            // I-detach ang lahat ng service assignments
+            $staffProfile->services()->detach();
+
+            // I-delete ang availability slots
+            $staffProfile->availabilities()->delete();
+
+            // I-delete ang staff profile
+            $staffProfile->delete();
+
+            // I-delete ang user account
+            $user->delete();
+        });
+    }
 }

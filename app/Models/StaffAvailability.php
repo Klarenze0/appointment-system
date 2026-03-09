@@ -12,7 +12,7 @@ class StaffAvailability extends Model
 
     protected $fillable = [
         'staff_id',
-        'date',
+        'available_date',
         'start_time',
         'end_time',
         'is_active',

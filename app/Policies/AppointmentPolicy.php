@@ -21,7 +21,8 @@ class AppointmentPolicy
      */
     public function view(User $user, Appointment $appointment): bool
     {
-        if ($user->isAdmin()) return true;
+        if ($user->isAdmin())
+            return true;
 
         return $appointment->client_id === $user->id;
     }
@@ -32,8 +33,23 @@ class AppointmentPolicy
      */
     public function cancel(User $user, Appointment $appointment): bool
     {
-        return $appointment->client_id === $user->id
-            && $appointment->status->isCancellable();
+        if ($appointment->client_id !== $user->id) {
+            return false;
+        }
+
+        if (!$appointment->status->isCancellable()) {
+            return false;
+        }
+
+        // Kapag paid na ang payment, hindi na pwedeng i-cancel
+        // ng client directly — kailangan mag-request ng refund
+        $payment = $appointment->payment;
+
+        if ($payment && $payment->status === \App\Enums\PaymentStatus::Paid) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

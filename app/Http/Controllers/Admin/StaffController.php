@@ -69,10 +69,17 @@ class StaffController extends Controller
     {
         $this->authorize('delete', $staff);
 
-        $this->staffManagement->deactivate($staff);
+        try {
+            $this->staffManagement->delete($staff);
 
-        return redirect()
-            ->route('admin.staff.index')
-            ->with('success', 'Staff member deactivated.');
+            return redirect()
+                ->route('admin.staff.index')
+                ->with('success', 'Staff member deleted successfully.');
+
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->with('error', $e->getMessage());
+        }
     }
 }

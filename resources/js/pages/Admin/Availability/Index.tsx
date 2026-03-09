@@ -10,7 +10,7 @@ import { router, useForm } from '@inertiajs/react';
 interface AvailabilitySlot {
     id: number;
     staff_id: number;
-    date: string;
+    available_date: string;
     start_time: string;
     end_time: string;
     is_active: boolean;
@@ -137,7 +137,7 @@ export default function AvailabilityIndex({ staff, availabilities, flash }: Prop
     function handleEdit(slot: AvailabilitySlot) {
         setEditingSlot(slot.id);
         editForm.setData({
-            date:       slot.date,
+            date:       slot.available_date,
             start_time: slot.start_time.slice(0, 5),
             end_time:   slot.end_time.slice(0, 5),
             is_active:  slot.is_active,
@@ -154,7 +154,7 @@ export default function AvailabilityIndex({ staff, availabilities, flash }: Prop
     }
 
     // Dates na may existing slots na — naka-disabled sa calendar
-    const existingDates = availabilities.map(a => new Date(a.date + 'T00:00:00'));
+    const existingDates = availabilities.map(a => new Date(a.available_date + 'T00:00:00'));
 
     // Dates na naka-selected sa bagong form — para ma-highlight sa calendar
     const newlySelectedDates = selectedDates.map(s => new Date(s.date + 'T00:00:00'));
@@ -212,7 +212,7 @@ export default function AvailabilityIndex({ staff, availabilities, flash }: Prop
                                             {editingSlot !== slot.id ? (
                                                 <>
                                                     <td className="px-4 py-3 text-white font-medium">
-                                                        {formatDate(slot.date)}
+                                                        {formatDate(slot.available_date)}
                                                     </td>
                                                     <td className="px-4 py-3 text-zinc-300">{formatTime(slot.start_time)}</td>
                                                     <td className="px-4 py-3 text-zinc-300">{formatTime(slot.end_time)}</td>

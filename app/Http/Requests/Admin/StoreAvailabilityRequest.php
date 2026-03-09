@@ -14,11 +14,11 @@ class StoreAvailabilityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'availabilities'             => ['required', 'array'],
-            'availabilities.*.date'       => ['required', 'date', 'after_or_equal:today'],
-            'availabilities.*.start_time' => ['required', 'date_format:H:i'],
-            'availabilities.*.end_time'   => ['required', 'date_format:H:i', 'after:availabilities.*.start_time'],
-            'availabilities.*.is_active'  => ['boolean'],
+            'availabilities'               => ['required', 'array'],
+            'availabilities.*.date'        => ['required', 'date', 'after_or_equal:today'],
+            'availabilities.*.start_time'  => ['required', 'date_format:H:i'],
+            'availabilities.*.end_time'    => ['required', 'date_format:H:i', 'after:availabilities.*.start_time'],
+            'availabilities.*.is_active'   => ['boolean'],
         ];
     }
 

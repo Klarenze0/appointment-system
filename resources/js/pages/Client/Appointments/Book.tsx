@@ -60,7 +60,7 @@ export default function BookAppointment({ services, flash }: Props) {
         setData('starts_at', '');
 
         if (data.service_id && staffId) {
-            fetchAvailableDates(Number(data.service_id), staffId, calendarMonth);
+            fetchAvailableDates(staffId, Number(data.service_id), calendarMonth);
         }
     }
 
@@ -92,6 +92,9 @@ export default function BookAppointment({ services, flash }: Props) {
     async function fetchAvailableDates(staffId: number, serviceId: number, month: Date) {
         setLoadingDates(true);
         setAvailableDates([]);
+
+        console.log('fetchAvailableDates called:', { staffId, serviceId, month });
+
         try {
             const response = await axios.get('/appointments/available-dates', {
                 params: {
@@ -101,8 +104,12 @@ export default function BookAppointment({ services, flash }: Props) {
                     year:       month.getFullYear(),
                 },
             });
+
+            console.log('available dates response:', response.data);
+
             setAvailableDates(response.data.dates);
         } catch {
+            console.error('fetchAvailableDates error:', errors);
             setAvailableDates([]);
         } finally {
             setLoadingDates(false);
@@ -202,8 +209,8 @@ export default function BookAppointment({ services, flash }: Props) {
                                     // Kapag nag-change ng month, i-fetch ulit ang available dates
                                     if (data.service_id && data.staff_id) {
                                         fetchAvailableDates(
-                                            Number(data.service_id),
                                             Number(data.staff_id),
+                                            Number(data.service_id),
                                             month
                                         );
                                     }

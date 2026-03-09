@@ -16,16 +16,17 @@ class BookingService
     public function __construct(
         private readonly AvailabilityService $availabilityService,
         private readonly PaymentService $paymentService,
-    ) {}
+    ) {
+    }
 
 
     public function book(User $client, array $data): Appointment
     {
         $service = Service::findOrFail($data['service_id']);
-        $staff   = StaffProfile::findOrFail($data['staff_id']);
+        $staff = StaffProfile::findOrFail($data['staff_id']);
 
         $startsAt = Carbon::parse($data['starts_at'])->utc();
-        $endsAt   = $startsAt->copy()->addMinutes($service->duration_minutes);
+        $endsAt = $startsAt->copy()->addMinutes($service->duration_minutes);
 
         return DB::transaction(function () use ($client, $service, $staff, $startsAt, $endsAt) {
 
@@ -48,7 +49,7 @@ class BookingService
                     AppointmentStatus::NoShow->value,
                 ])
                 ->where('starts_at', '<', $endsAt)
-                ->where('ends_at',   '>', $startsAt)
+                ->where('ends_at', '>', $startsAt)
                 ->exists();
 
             if ($hasOverlap) {
@@ -60,7 +61,7 @@ class BookingService
             $isAvailable = $this->availabilityService
                 ->isStaffAvailable($staff, $startsAt, $endsAt);
 
-            if (! $isAvailable) {
+            if (!$isAvailable) {
                 throw new \RuntimeException(
                     'The selected staff is not available at this time.'
                 );
@@ -70,20 +71,20 @@ class BookingService
                 ->where('services.id', $service->id)
                 ->exists();
 
-            if (! $isAssigned) {
+            if (!$isAssigned) {
                 throw new \RuntimeException(
                     'This staff member does not offer the selected service.'
                 );
             }
 
             $appointment = Appointment::create([
-                'client_id'  => $client->id,
-                'staff_id'   => $staff->id,
+                'client_id' => $client->id,
+                'staff_id' => $staff->id,
                 'service_id' => $service->id,
-                'starts_at'  => $startsAt,
-                'ends_at'    => $endsAt,
-                'status'     => AppointmentStatus::Pending,
-                'notes'      => null,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'status' => AppointmentStatus::Pending,
+                'notes' => null,
             ]);
 
             $this->paymentService->createForAppointment(
@@ -96,7 +97,7 @@ class BookingService
 
     public function cancel(Appointment $appointment): Appointment
     {
-        if (! $appointment->status->isCancellable()) {
+        if (!$appointment->status->isCancellable()) {
             throw new \RuntimeException(
                 'This appointment can no longer be cancelled.'
             );
@@ -120,7 +121,7 @@ class BookingService
 
     public function reschedule(Appointment $appointment, string $newStartsAt): Appointment
     {
-        if (! $appointment->status->isReschedulable()) {
+        if (!$appointment->status->isReschedulable()) {
             throw new \RuntimeException(
                 'This appointment can no longer be rescheduled.'
             );
@@ -131,29 +132,29 @@ class BookingService
 
             return $this->book($appointment->client, [
                 'service_id' => $appointment->service_id,
-                'staff_id'   => $appointment->staff_id,
-                'starts_at'  => $newStartsAt,
+                'staff_id' => $appointment->staff_id,
+                'starts_at' => $newStartsAt,
             ]);
         });
     }
 
     public function getAvailableSlots(
-    StaffProfile $staff,
-    Service $service,
-    string $date
+        StaffProfile $staff,
+        Service $service,
+        string $date
     ): array {
         $availability = $staff->availabilities()
-            ->where('date', $date)
+            ->where('available_date', $date)
             ->where('is_active', true)
             ->first();
 
-        if (! $availability) {
+        if (!$availability) {
             return [];
         }
 
-        $slots        = [];
-        $slotStart    = Carbon::parse($date . ' ' . $availability->start_time)->utc();
-        $windowEnd    = Carbon::parse($date . ' ' . $availability->end_time)->utc();
+        $slots = [];
+        $slotStart = Carbon::parse($date . ' ' . $availability->start_time)->utc();
+        $windowEnd = Carbon::parse($date . ' ' . $availability->end_time)->utc();
         $durationMins = $service->duration_minutes;
 
         $existingAppointments = Appointment::where('staff_id', $staff->id)
@@ -172,10 +173,10 @@ class BookingService
                     && $slotEnd->gt(Carbon::parse($appt->starts_at));
             });
 
-            if (! $isOccupied && $slotStart->isFuture()) {
+            if (!$isOccupied && $slotStart->isFuture()) {
                 $slots[] = [
-                    'starts_at'    => $slotStart->toIso8601String(),
-                    'ends_at'      => $slotEnd->toIso8601String(),
+                    'starts_at' => $slotStart->toIso8601String(),
+                    'ends_at' => $slotEnd->toIso8601String(),
                     'display_time' => $slotStart->format('g:i A'),
                 ];
             }
@@ -185,7 +186,7 @@ class BookingService
 
         return $slots;
     }
-    
+
     public function getClientAppointments(User $client): Collection
     {
         return Appointment::where('client_id', $client->id)
@@ -195,24 +196,22 @@ class BookingService
             ->get();
     }
 
-        public function getAvailableDatesForMonth(
+    public function getAvailableDatesForMonth(
         StaffProfile $staff,
         Service $service,
         int $year,
         int $month
     ): array {
-        // Kunin ang lahat ng availability ng staff sa buwan na ito
         $availabilities = \App\Models\StaffAvailability::where('staff_id', $staff->id)
             ->where('is_active', true)
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
+            ->whereYear('available_date', $year)
+            ->whereMonth('available_date', $month)
             ->get();
 
         if ($availabilities->isEmpty()) {
             return [];
         }
 
-        // Kunin ang lahat ng existing appointments ng staff sa buwan na ito
         $existingAppointments = Appointment::where('staff_id', $staff->id)
             ->whereNotIn('status', [
                 AppointmentStatus::Cancelled->value,
@@ -225,20 +224,42 @@ class BookingService
         $availableDates = [];
 
         foreach ($availabilities as $availability) {
-            $date      = \Carbon\Carbon::parse($availability->date);
-            $dateStr   = $date->toDateString();
+            $dateStr = \Carbon\Carbon::parse($availability->available_date)
+                ->format('Y-m-d');
 
-            // Preskip ang past dates
-            if ($date->isPast() && ! $date->isToday()) {
+            $today = \Carbon\Carbon::today()->format('Y-m-d');
+            if ($dateStr < $today) {
                 continue;
             }
 
-            // I-check kung may available slot pa sa date na ito
-            $slots = $this->getAvailableSlots($staff, $service, $dateStr);
+            $windowStart  = \Carbon\Carbon::parse($dateStr . ' ' . $availability->start_time);
+            $windowEnd    = \Carbon\Carbon::parse($dateStr . ' ' . $availability->end_time);
+            $durationMins = $service->duration_minutes;
+            $slotStart    = $windowStart->copy();
+            $hasSlot      = false;
 
-            if (! empty($slots)) {
+            while ($slotStart->copy()->addMinutes($durationMins)->lte($windowEnd)) {
+                $slotEnd = $slotStart->copy()->addMinutes($durationMins);
+
+                $isOccupied = $existingAppointments->contains(function ($appt) use ($slotStart, $slotEnd) {
+                    $apptStart = \Carbon\Carbon::parse($appt->starts_at);
+                    $apptEnd   = \Carbon\Carbon::parse($appt->ends_at);
+                    return $slotStart->lt($apptEnd) && $slotEnd->gt($apptStart);
+                });
+
+                if (! $isOccupied) {
+                    $hasSlot = true;
+                    break; // ← lumalabas sa WHILE loop lang, hindi sa foreach
+                }
+
+                $slotStart->addMinutes($durationMins);
+            }
+
+            // Idagdag ang date kung may available slot
+            if ($hasSlot) {
                 $availableDates[] = $dateStr;
             }
+            // ← walang break dito — nagpapatuloy sa susunod na availability
         }
 
         return $availableDates;
