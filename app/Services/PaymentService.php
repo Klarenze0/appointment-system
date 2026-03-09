@@ -13,6 +13,7 @@ class PaymentService
 {
     public function __construct(
         private readonly PaymentGateway $gateway,
+        private readonly NotificationService $notificationService,
     ) {}
 
     /**
@@ -67,6 +68,10 @@ class PaymentService
             $payment->appointment->update([
                 'status' => AppointmentStatus::Confirmed,
             ]);
+
+            $this->notificationService->sendConfirmation(
+        $payment->appointment->load('client', 'service', 'staff.user')
+            );
 
             return $payment->fresh(['appointment']);
         });

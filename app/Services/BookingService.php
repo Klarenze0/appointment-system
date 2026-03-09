@@ -16,6 +16,7 @@ class BookingService
     public function __construct(
         private readonly AvailabilityService $availabilityService,
         private readonly PaymentService $paymentService,
+        private readonly NotificationService $notificationService,
     ) {
     }
 
@@ -114,6 +115,10 @@ class BookingService
             $appointment->update([
                 'status' => AppointmentStatus::Cancelled,
             ]);
+
+            $this->notificationService->sendCancellation(
+        $appointment->load('client', 'service', 'staff.user')
+            );
 
             return $appointment->fresh();
         });
@@ -224,16 +229,16 @@ class BookingService
         $availableDates = [];
 
         foreach ($availabilities as $availability) {
-            $dateStr = \Carbon\Carbon::parse($availability->available_date)
+            $dateStr = Carbon::parse($availability->available_date)
                 ->format('Y-m-d');
 
-            $today = \Carbon\Carbon::today()->format('Y-m-d');
+            $today = Carbon::today()->format('Y-m-d');
             if ($dateStr < $today) {
                 continue;
             }
 
-            $windowStart  = \Carbon\Carbon::parse($dateStr . ' ' . $availability->start_time);
-            $windowEnd    = \Carbon\Carbon::parse($dateStr . ' ' . $availability->end_time);
+            $windowStart  = Carbon::parse($dateStr . ' ' . $availability->start_time);
+            $windowEnd    = Carbon::parse($dateStr . ' ' . $availability->end_time);
             $durationMins = $service->duration_minutes;
             $slotStart    = $windowStart->copy();
             $hasSlot      = false;
@@ -242,8 +247,8 @@ class BookingService
                 $slotEnd = $slotStart->copy()->addMinutes($durationMins);
 
                 $isOccupied = $existingAppointments->contains(function ($appt) use ($slotStart, $slotEnd) {
-                    $apptStart = \Carbon\Carbon::parse($appt->starts_at);
-                    $apptEnd   = \Carbon\Carbon::parse($appt->ends_at);
+                    $apptStart = Carbon::parse($appt->starts_at);
+                    $apptEnd   = Carbon::parse($appt->ends_at);
                     return $slotStart->lt($apptEnd) && $slotEnd->gt($apptStart);
                 });
 

@@ -193,7 +193,7 @@ export default function AvailabilityIndex({ staff, availabilities, flash }: Prop
                         </p>
                     ) : (
                         <div className="border border-zinc-800 rounded overflow-hidden">
-                            <div className="max-h-[320px] overflow-y-auto">
+                            <div className="max-h-80 overflow-y-auto">
                             <table className="w-full text-xs">
                                 <thead>
                                     <tr className="border-b border-zinc-800 bg-zinc-900/50">
