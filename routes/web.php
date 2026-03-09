@@ -9,6 +9,8 @@ use App\Http\Controllers\Client\BookingController;
 use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
+use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -84,5 +86,16 @@ Route::middleware(['auth', 'verified', 'role:client'])
         Route::get('/payments/{payment}',          [PaymentController::class, 'show'])->name('client.payments.show');
         Route::post('/payments/{payment}/process', [PaymentController::class, 'process'])->name('client.payments.process');
     });
-    
+
+// Staff routes
+
+Route::middleware(['auth', 'verified', 'role:staff'])
+    ->prefix('staff')
+    ->name('staff.')
+    ->group(function () {
+        Route::get('dashboard', [StaffDashboardController::class, 'index'])->name('dashboard');
+        Route::get('appointments', [StaffAppointmentController::class, 'index'])->name('appointments.index');
+        Route::patch('appointments/{appointment}/complete', [StaffAppointmentController::class, 'complete'])->name('appointments.complete');
+        Route::patch('appointments/{appointment}/no-show', [StaffAppointmentController::class, 'noShow'])->name('appointments.no-show');
+    });
 require __DIR__.'/settings.php';
