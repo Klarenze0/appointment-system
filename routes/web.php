@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Client\BookingController;
 use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Admin\CalendarController;
+use App\Http\Controllers\Admin\DashboardController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -23,6 +24,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->name('admin.')
     ->group(function () {
 
+
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        
         Route::resource('services', ServiceController::class)
             ->except(['show']);
 

@@ -73,7 +73,17 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => function () {
+        if (! auth()->check()) {
+            return '/login';
+        }
+
+        return match(auth()->user()->role->value) {
+            'admin' => '/admin/dashboard',
+            'staff' => '/staff/appointments',
+            default => '/appointments',
+        };
+    },
 
     /*
     |--------------------------------------------------------------------------

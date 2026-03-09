@@ -40,6 +40,16 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        Fortify::redirects('login', function () {
+        $user = auth()->user();
+
+        return match($user->role->value) {
+            'admin'  => '/admin/dashboard',
+            'staff'  => '/staff/appointments',
+            default  => '/appointments',
+        };
+    });
     }
 
     /**
