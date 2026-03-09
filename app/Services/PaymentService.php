@@ -7,6 +7,7 @@ use App\Enums\AppointmentStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Appointment;
 use App\Models\Payment;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 
 class PaymentService
