@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\CalendarController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
+use App\Http\Controllers\Admin\AppointmentController as AdminAppointmentController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -51,6 +52,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])
             });    
         Route::get('calendar', [CalendarController::class, 'index'])
             ->name('calendar');
+        Route::get('appointments', [AdminAppointmentController::class, 'index'])->name('appointments.index');
+        Route::patch('appointments/{appointment}/confirm',  [AdminAppointmentController::class, 'confirm'])->name('appointments.confirm');
+        Route::patch('appointments/{appointment}/complete', [AdminAppointmentController::class, 'complete'])->name('appointments.complete');
+        Route::patch('appointments/{appointment}/no-show',  [AdminAppointmentController::class, 'noShow'])->name('appointments.no-show');
+        Route::patch('appointments/{appointment}/cancel',   [AdminAppointmentController::class, 'cancel'])->name('appointments.cancel');
     });
 
 // ─── Client Routes ────────────────────────────────────────────────────────────
