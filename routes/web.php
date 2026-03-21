@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AvailabilityController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\StaffController;
@@ -13,9 +14,13 @@ use App\Http\Controllers\Staff\AppointmentController as StaffAppointmentControll
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
 use App\Http\Controllers\Admin\AppointmentController as AdminAppointmentController;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', function () {
+    $services = \App\Models\Service::where('is_active', true)->get();
+    return Inertia::render('welcome', [
+        'services'    => $services,
+        'canRegister' => true,
+    ]);
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

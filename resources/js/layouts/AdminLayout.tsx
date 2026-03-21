@@ -23,7 +23,6 @@ const navItems = [
     { label: 'Services',     href: '/admin/services',  icon: Scissors },
     { label: 'Staff',        href: '/admin/staff',     icon: Users },
     { label: 'Appointments', href: '/admin/calendar',  icon: CalendarDays },
-    { label: 'Settings',     href: '/admin/settings',  icon: Settings },
 ];
 
 export default function AdminLayout({ children, title, breadcrumbs }: AdminLayoutProps) {
